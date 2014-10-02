@@ -5,9 +5,11 @@ Grava Hal game
 
 To run it, you need to execute:
 
+```sh
 git clone https://github.com/aalbul/grava.git
 cd grava-hal
 mvn tomcat7:run-war
+```
 
 Open 2 instances of browser and navigate to:
 
