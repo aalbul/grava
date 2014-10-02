@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.socket.io/socket.io-1.1.0.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript">
+        var channel = io.connect("ws://localhost:3001/");
+
+        var myId;
+        var opponentId;
+
+        channel.on('connect', function (socket) {
+            showConnectedScreen();
+            channel.on('disconnect', function () {
+                showConnectedScreen();
+            });
+            channel.on('game-started', function (info) {
+                showGameStartedScreen(info);
+            });
+            channel.on('your-turn', function () {
+                showYourTurnScreen();
+            });
+            channel.on('registered', function (id) {
+                showRegisteredScreen(id);
+            });
+            channel.on('board-update', function (board) {
+                drawBoards(board);
+            });
+            channel.on('another-try', function () {
+                showAnotherTryScreen();
+            });
+            channel.on('game-completed', function (winner) {
+                showAnotherTryScreen();
+            });
+        });
+
+        /**
+         * Shows 'connected' screen
+         */
+        function showConnectedScreen() {
+            console.log('a user connected');
+            resetScreens();
+            showInfo("To join, click 'Start' button.");
+            var start = $("#start");
+            start.removeAttr('disabled');
+            start.show();
+        }
+
+        /**
+         * Shows 'disconnected' screen
+         */
+        function showDisconnectedScreen() {
+            console.log('user disconnected');
+            resetScreens();
+            showInfo("Disconnected");
+        }
+
+        /**
+         * Shows screen and wait for another user
+         */
+        function showRegisteredScreen(id) {
+            myId = id;
+            console.log('registered.');
+            $('#start').hide();
+            showInfo('Waiting for another user.')
+        }
+
+        function showGameCompletedScreen(winner) {
+            resetScreens();
+            hideBoards();
+            if (winner == myId) {
+                showInfo("You loose.")
+            } else {
+                showInfo("You win.")
+            }
+        }
+
+        /**
+         * Shows waiting screen
+         */
+        function showWaitingForYourTurnScreen() {
+            resetScreens();
+            showInfo('Waiting for your turn.');
+        }
+
+        /**
+         * Shows game started screen
+         */
+        function showGameStartedScreen(info) {
+            myId = info.yourId;
+            opponentId = info.opponentId;
+            console.log('Game is started. Your id is: [' + myId + "], opponent: [" + opponentId + "].");
+            resetScreens();
+            showInfo('Game started. Waiting for your turn.')
+        }
+
+        /**
+         * Shows screen with actions
+         */
+        function showYourTurnScreen() {
+            console.log('Its your turn now.');
+            showInfo('Its your turn.');
+            showSowControls();
+        }
+
+        function showSowControls() {
+            $('#sow').show();
+            $('#stones').show();
+            $('#stoneLabel').show();
+        }
+
+        /**
+         * Hide all elements on the screen
+         */
+        function resetScreens() {
+            $('#sow').hide();
+            var stones = $('#stones');
+            stones.hide();
+            stones.text('');
+            $('#stoneLabel').hide();
+            var start = $('#start');
+            start.hide();
+            start.attr('disabled', 'disabled');
+        }
+
+        /**
+         * Shows informational message
+         */
+        function showInfo(message) {
+            var info = $('#info');
+            info.text(message);
+            info.show();
+        }
+
+        function drawBoards(boards) {
+            renderBoard(boards, myId, 'myBoard');
+            renderBoard(boards, opponentId, 'oppositeBoard');
+        }
+
+        /**
+         * Hide all users boards
+         */
+        function hideBoards() {
+            $('#myBoard').hide();
+            $('#oppositeBoard').hide();
+        }
+
+        /**
+         * Render specified board
+         */
+        function renderBoard(boards, boardId, boardName) {
+            var board = boards.boardParts[boardId];
+            var label = $('#' + boardName + 'Label');
+            var area = $('#' + boardName);
+            var pits = '| ';
+            board.pits.forEach(function (value) {
+                pits = pits + value + ' | '
+            });
+            pits = pits + '>>' + board.gravaHal + '<< |';
+            label.text(pits);
+            area.show();
+        }
+
+        /**
+         * Shows screen with another try message.
+         */
+        function showAnotherTryScreen() {
+            showInfo("Your last stone landed on Grava Hal. Please make one more turn.");
+            showSowControls();
+        }
+
+        /**
+         * Start the game and wait for another user
+         */
+        function start() {
+            channel.emit('ready');
+        }
+
+        function sow() {
+            channel.emit('sow', $("#stones").val());
+            showWaitingForYourTurnScreen();
+        }
+    </script>
+</head>
+<body>
+<div>
+    <div>
+        <button id="start" onclick="start();" disabled>Start</button>
+        <label id="info" hidden="true"></label>
+        <label id="stoneLabel" for="stones" hidden="true">Enter stone index.</label><input id="stones" hidden="true"/>
+        <button id="sow" onclick="sow();" hidden="true">Sow</button>
+        <div id="myBoard" hidden="true">
+            <label>My Board:</label>
+            <label id="myBoardLabel"></label>
+        </div>
+        <div id="oppositeBoard" hidden="true">
+            <label>Opposite Board:</label>
+            <label id="oppositeBoardLabel"></label>
+        </div>
+    </div>
+</div>
+</body>
+</html>
